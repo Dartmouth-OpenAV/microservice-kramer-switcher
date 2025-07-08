@@ -6,6 +6,8 @@ A Kramer Switcher is a hardware device used for managing and routing multiple au
 
 [Kramer VP-558 boardroom switcher scaler](https://www1.kramerav.com/us/product/vp-558)
 
+[Microservice curl test documentation](https://github.com/Dartmouth-OpenAV/documentation/blob/main/curl_test_readme.md)
+
 ![](https://github.com/Dartmouth-OpenAV/microservice-kramer-switcher/blob/main/photo.png)
 
 ![](https://github.com/Dartmouth-OpenAV/microservice-kramer-switcher/blob/main/diagram.png)
