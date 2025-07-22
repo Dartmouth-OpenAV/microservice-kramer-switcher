@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"github.com/fatih/color"
+
 	"github.com/Dartmouth-OpenAV/microservice-framework/framework"
+	"github.com/fatih/color"
 )
 
 const NAME_OUTPUT_ADD = 1000 // An audio channel name with this added means Kramer output stage
@@ -66,7 +67,7 @@ func sendCommand(socketKey string, command []byte, expectedResponse string) (str
 			}
 		}
 	}
-	origMsg := msg 
+	origMsg := msg
 	if msg == "" { // No response
 		if recursions < maxRecur { // haven't exhausted our available time
 			recursions++
@@ -102,9 +103,9 @@ func sendCommand(socketKey string, command []byte, expectedResponse string) (str
 
 		if !strings.Contains(string(command), "?") { // If it's a set command
 			//framework.Log(fmt.Sprintf("Set command: %s respVals[2]: %s\n", string(command), respVals[2]))
-			if len(respVals) < 2 {  // Used to check for "OK" responses, but VP-558 doesn't always emit "OK" on success :-/
+			if len(respVals) < 2 { // Used to check for "OK" responses, but VP-558 doesn't always emit "OK" on success :-/
 				errMsg := fmt.Sprintf(function+" - hjjkn87 got too few tokens in response from %s to a set command. The command was: %s response was: %s\n\n",
-				socketKey, string(command), string(origMsg))
+					socketKey, string(command), string(origMsg))
 				framework.Log(errMsg)
 			}
 		}
@@ -122,12 +123,13 @@ func sendCommand(socketKey string, command []byte, expectedResponse string) (str
 
 	//global_recur_level = global_recur_level - 1
 	//framework.Log(fmt.Sprintf(color.HiBlueString("sendCommand() Done sending command [%s] to %v, RECUR level = %d", string(command), address, global_recur_level)))
-	framework.Log(fmt.Sprintf(function + " - Success: got expected response: [%s], retMsg is: [%s]\n", expectedResponse, retMsg))
+	framework.Log(fmt.Sprintf(function+" - Success: got expected response: [%s], retMsg is: [%s]\n", expectedResponse, retMsg))
 	return retMsg, nil
 }
 
 // Implements the hack to allow Kramer names >= NAME_OUTPUT_ADD (1000) so we can reuse the volume routines
-//     for both input and output stage
+//
+//	for both input and output stage
 func convertName(name string) (string, string) {
 	intname, err := strconv.Atoi(name)
 	if err != nil {
@@ -159,7 +161,7 @@ func setAudioMute(socketKey string, name string, value string) (string, error) {
 		framework.AddToErrors(socketKey, errMsg)
 		return value, errors.New(errMsg)
 	}
-	
+
 	baseStr := "MUTE"
 	commandStr := []byte("#" + baseStr + " " + name + "," + onoff)
 	resp, err := sendCommand(socketKey, commandStr, baseStr)
@@ -234,7 +236,7 @@ func setVideoMute(socketKey, output string, value string) (string, error) {
 
 	// VP-558 has a bug that they reversed video mute logic, so we need to find out what model we have and
 	//  act differently for VP-558
-	theModel := getModel(socketKey)
+	theModel, _ := getModel(socketKey)
 
 	if value == `"true"` {
 		onoff = "1" // Values for video disable in Kramer VMUTE command
@@ -305,7 +307,7 @@ func getVideoMute(socketKey string, output string) (string, error) {
 
 	// VP-558 has a bug that they reversed video mute logic, so we need to find out what model we have and
 	//  act differently for VP-558
-	theModel := getModel(socketKey)
+	theModel, _ := getModel(socketKey)
 
 	baseStr := "VMUTE"
 	commandStr := []byte("#" + baseStr + "? " + output)
@@ -417,7 +419,7 @@ func getVolume(socketKey string, name string) (string, error) {
 	return `"` + respGain + `"`, nil
 }
 
-func getModel(socketKey string) string {
+func getModel(socketKey string) (string, error) {
 	function := "getModel"
 	modelEndPoint := "model"
 
@@ -430,13 +432,13 @@ func getModel(socketKey string) string {
 		if err != nil {
 			errMsg := fmt.Sprintf(function+" - error sending #MODEL command %v", err.Error())
 			framework.AddToErrors(socketKey, errMsg)
-			return string(resp)
+			return string(resp), errors.New(errMsg)
 		}
 		respVals := strings.Split(resp, " ")
 		if len(respVals) != 2 {
 			errMsg := fmt.Sprintf(function + " - wrong number of tokens in model response")
 			framework.AddToErrors(socketKey, errMsg)
-			return string(resp)
+			return string(resp), errors.New(errMsg)
 		}
 		model = respVals[1]
 
@@ -448,7 +450,7 @@ func getModel(socketKey string) string {
 
 	theModel := `"` + model + `"`
 	framework.Log(function + " - returning: " + theModel)
-	return theModel
+	return theModel, nil
 }
 
 func setVideoRoute(socketKey string, output string, input string) (string, error) {
@@ -516,7 +518,7 @@ func doGetVideoRoute(socketKey string, output string) (string, error) {
 	function := "doGetVideoRoute"
 	framework.Log(function)
 	baseStr := "ROUTE" // Kramer command that returns input information
-	layer := " 1," // Always get VideoRoute (layer=1) because the Kramer device throws error when getting AudioAndVideo route (layer=12)
+	layer := " 1,"     // Always get VideoRoute (layer=1) because the Kramer device throws error when getting AudioAndVideo route (layer=12)
 	commandStr := []byte("#" + baseStr + "?" + layer + output)
 	resp, err := sendCommand(socketKey, commandStr, baseStr)
 	if err != nil {
@@ -543,7 +545,7 @@ func doGetVideoRoute(socketKey string, output string) (string, error) {
 	}
 
 	// VP-778 has an off-by-one bug.  Fix it by adding 1 to the input channel number on get.
-	theModel := getModel(socketKey)
+	theModel, _ := getModel(socketKey)
 	if theModel == `"VP-778"` {
 		intIn = intIn + 1
 	}
@@ -602,6 +604,15 @@ func getVideoInputStatus(socketKey string, input string) (string, error) {
 	}
 	returnStr := "true"
 	if intStatus == 0 {
+		returnStr = "false"
+	}
+	return `"` + returnStr + `"`, nil
+}
+
+func healthCheck(socketKey string) (string, error) {
+	_, err := getModel(socketKey)
+	returnStr := "true"
+	if err != nil && strings.Contains(err.Error(), "error sending #MODEL command") {
 		returnStr = "false"
 	}
 	return `"` + returnStr + `"`, nil
