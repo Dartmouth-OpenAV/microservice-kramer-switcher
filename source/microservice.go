@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+
 	"github.com/Dartmouth-OpenAV/microservice-framework/framework"
 )
 
@@ -9,15 +10,15 @@ import (
 
 func setFrameworkGlobals() {
 	// Define device specific globals
-	framework.DefaultSocketPort = 5000   // Kramer's default socket port
-	framework.GlobalDelimiter = 0xA // Linefeed is Kramer's line delimiter for socket commands
+	framework.DefaultSocketPort = 5000 // Kramer's default socket port
+	framework.GlobalDelimiter = 0xA    // Linefeed is Kramer's line delimiter for socket commands
 	framework.MicroserviceName = "OpenAV Kramer Video Switcher Microservice"
 
 	// globals that change modes in the microservice framework:
 	framework.CheckFunctionAppendBehavior = "Remove older instance"
-	framework.KeepAlive = false  // Kramer devices don't always fare well if we keep the connection open too long
+	framework.KeepAlive = false // Kramer devices don't always fare well if we keep the connection open too long
 
-	// Kramer switches unmute video when switching inputs, so now we need to update the videomute cache value so 
+	// Kramer switches unmute video when switching inputs, so now we need to update the videomute cache value so
 	// our system catches up with that change quickly.  We do this by simply setting the cache value to what we know
 	// it will be.
 	framework.RelatedActions["videoroute"] = make(map[string]string)
@@ -31,10 +32,11 @@ func setFrameworkGlobals() {
 // socketKey is the network connection for the framework to use to communicate with the device.
 // setting is the first parameter in the URI.
 // arg1 are the second and third parameters in the URI.
-//   Example PUT URIs that will result in this function being invoked:
-// 	 ":address/:setting/"
-//   ":address/:setting/:arg1"
-//   ":address/:setting/:arg1/:arg2"
+//
+//	  Example PUT URIs that will result in this function being invoked:
+//		 ":address/:setting/"
+//	  ":address/:setting/:arg1"
+//	  ":address/:setting/:arg1/:arg2"
 func doDeviceSpecificSet(socketKey string, setting string, arg1 string, arg2 string, arg3 string) (string, error) {
 	function := "doDeviceSpecificSet"
 
@@ -63,10 +65,12 @@ func doDeviceSpecificSet(socketKey string, setting string, arg1 string, arg2 str
 // socketKey is the network connection for the framework to use to communicate with the device.
 // setting is the first parameter in the URI.
 // arg1 are the second and third parameters in the URI.
-//   Example GET URIs that will result in this function being invoked:
-// 	 ":address/:setting/"
-//   ":address/:setting/:arg1"
-//   ":address/:setting/:arg1/:arg2"
+//
+//	  Example GET URIs that will result in this function being invoked:
+//		 ":address/:setting/"
+//	  ":address/:setting/:arg1"
+//	  ":address/:setting/:arg1/:arg2"
+//
 // Every microservice using this golang microservice framework needs to provide this function to invoke functions to do gets.
 func doDeviceSpecificGet(socketKey string, setting string, arg1 string, arg2 string) (string, error) {
 	function := "doDeviceSpecificGet"
@@ -88,6 +92,8 @@ func doDeviceSpecificGet(socketKey string, setting string, arg1 string, arg2 str
 		temp, err := getOccupancyStatus(socketKey, arg1)
 		return temp, err
 		// return getOccupancyStatus(socketKey, arg1)
+	case "healthcheck":
+		return healthCheck(socketKey)
 	}
 
 	// If we get here, we didn't recognize the setting.  Send an error back to the config writer who had a bad URL.
@@ -100,4 +106,4 @@ func doDeviceSpecificGet(socketKey string, setting string, arg1 string, arg2 str
 func main() {
 	setFrameworkGlobals()
 	framework.Startup()
- } 
+}
