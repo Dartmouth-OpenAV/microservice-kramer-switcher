@@ -231,6 +231,15 @@ func getAudioMute(socketKey string, name string) (string, error) {
 }
 
 func setVideoMute(socketKey, output string, value string) (string, error) {
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoSetVideoMute(socketKey, output, value)
+	} else {
+		return doSetVideoMute(socketKey, output, value)
+	}
+}
+
+func doSetVideoMute(socketKey, output string, value string) (string, error) {
 	function := "setVideoMute"
 	onoff := "not set"
 
@@ -302,7 +311,16 @@ func setVideoMute(socketKey, output string, value string) (string, error) {
 	return value, nil
 }
 
-func getVideoMute(socketKey string, output string) (string, error) {
+func getVideoMute(socketKey, output string) (string, error) {
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoGetVideoMute(socketKey, output)
+	} else {
+		return doGetVideoMute(socketKey, output)
+	}
+}
+
+func doGetVideoMute(socketKey string, output string) (string, error) {
 	function := "getVideoMute"
 
 	// VP-558 has a bug that they reversed video mute logic, so we need to find out what model we have and
@@ -454,7 +472,12 @@ func getModel(socketKey string) (string, error) {
 }
 
 func setVideoRoute(socketKey string, output string, input string) (string, error) {
-	return doSetVideoRoute(socketKey, output, input, "onlyVideo")
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoSetVideoRoute(socketKey, output, input)
+	} else {
+		return doSetVideoRoute(socketKey, output, input, "onlyVideo")
+	}
 }
 
 func setAudioAndVideoRoute(socketKey string, output string, input string) (string, error) {
@@ -507,7 +530,12 @@ func doSetVideoRoute(socketKey string, output string, input string, mode string)
 }
 
 func getVideoRoute(socketKey string, output string) (string, error) {
-	return doGetVideoRoute(socketKey, output)
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoGetVideoRoute(socketKey, output)
+	} else {
+		return doGetVideoRoute(socketKey, output)
+	}
 }
 
 func getAudioAndVideoRoute(socketKey string, output string) (string, error) {
