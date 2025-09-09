@@ -148,7 +148,16 @@ func convertName(name string) (string, string) {
 }
 
 func setAudioMute(socketKey string, name string, value string) (string, error) {
-	function := "setAudioMute"
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoSetAudioMute(socketKey, name, value)
+	} else {
+		return doSetAudioMute(socketKey, name, value)
+	}
+}
+
+func doSetAudioMute(socketKey string, name string, value string) (string, error) {
+	function := "doSetAudioMute"
 
 	onoff := "unknown"
 
@@ -196,7 +205,16 @@ func setAudioMute(socketKey string, name string, value string) (string, error) {
 }
 
 func getAudioMute(socketKey string, name string) (string, error) {
-	function := "getAudioMute"
+	theModel, _ := getModel(socketKey)
+	if strings.Contains(theModel, "VS-88UT") || strings.Contains(theModel, "VS-84UT") {
+		return vsDoGetAudioMute(socketKey, name)
+	} else {
+		return doGetAudioMute(socketKey, name)
+	}
+}
+
+func doGetAudioMute(socketKey string, name string) (string, error) {
+	function := "doGetAudioMute"
 
 	baseStr := "MUTE"
 	commandStr := []byte("#" + baseStr + "? " + name)
@@ -582,6 +600,14 @@ func doGetVideoRoute(socketKey string, output string) (string, error) {
 	returnStr := `"` + strconv.Itoa(intIn) + `"`
 	framework.Log(function + " - returning " + returnStr)
 	return returnStr, nil
+}
+
+func setAudioRoute(socketKey string, output string, input string) (string, error) {
+	return vsDoSetAudioRoute(socketKey, output, input)
+}
+
+func getAudioRoute(socketKey string, output string) (string, error) {
+	return vsDoGetAudioRoute(socketKey, output)
 }
 
 func getOccupancyStatus(socketKey string, input string) (string, error) {

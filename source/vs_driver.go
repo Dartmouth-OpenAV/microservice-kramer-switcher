@@ -254,3 +254,212 @@ func vsDoGetVideoMute(socketKey string, output string) (string, error) {
 
 	return `"` + value + `"`, nil
 }
+
+func vsDoSetAudioRoute(socketKey string, output string, input string) (string, error) {
+	function := "vsDoSetAudioRoute"
+	baseStr := "X-ROUTE"
+	noQuotesInput := strings.ReplaceAll(input, `"`, "")
+
+	outputPortType := "ANALOG_AUDIO"
+	var inputPortType string
+
+	switch noQuotesInput {
+	case "1", "2", "3", "4", "5", "6":
+		inputPortType = "HDMI"
+	case "7", "8":
+		inputPortType = "HDBT"
+	default:
+		errMsg := fmt.Sprintf(function + " - 9j4ncd unrecognized input value: " + noQuotesInput)
+		framework.AddToErrors(socketKey, errMsg)
+		return noQuotesInput, errors.New(errMsg)
+	}
+	// Ex Command: #X-ROUTE OUT.ANALOG_AUDIO.1.AUDIO.1,IN.HDMI.2.AUDIO.1
+	outputCommandStr := "OUT." + outputPortType + "." + output + ".AUDIO.1"
+	inputCommandStr := "IN." + inputPortType + "." + noQuotesInput + ".AUDIO.1"
+	commandStr := []byte("#" + baseStr + " " + outputCommandStr + "," + inputCommandStr)
+
+	resp, err := sendCommand(socketKey, commandStr, baseStr)
+	if err != nil {
+		errMsg := fmt.Sprintf(function+" - error sending command %v", err.Error())
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+
+	// Now we need to parse the response from the Kramer
+	// Ex Response: #X-ROUTE OUT.ANALOG_AUDIO.1.AUDIO.1,IN.HDMI.2.AUDIO.1
+	// Parse and verify the value we got back
+	respVals := strings.Split(string(resp), " ")    // Kramer delimits responses with spaces
+	respSections := strings.Split(respVals[1], ",") // Kramer delimits the video route part of the response with commas
+	if len(respSections) != 2 {
+		errMsg := fmt.Sprintf(function+" - 4ock6j wrong number of tokens in response: %s", string(resp))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	// Ex: OUT.ANALOG_AUDIO.1.AUDIO.1
+	outputResp := strings.Split(respSections[0], ".")
+	if len(outputResp) != 5 {
+		errMsg := fmt.Sprintf(function+" - 5n4dm4 wrong number of tokens in output response: %s", string(respSections[0]))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	outputInt := outputResp[2]
+
+	// Ex: IN.HDMI.2.AUDIO.1
+	inputResp := strings.Split(respSections[1], ".")
+	if len(inputResp) != 5 {
+		errMsg := fmt.Sprintf(function+" - 5ckdg54 wrong number of tokens in input response: %s", string(respSections[1]))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	inputInt := inputResp[2]
+
+	if outputInt != output {
+		errMsg := fmt.Sprintf(function+" - kf04dj5 output returned: %s doesn't match output specified: %s\n", outputInt, output)
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	if `"`+inputInt+`"` != input { // add quotes because the input and the cache store values in JSON
+		errMsg := fmt.Sprintf(function+" - 0ck4kd input returned: %s doesn't match input set: %s\n", `"`+inputInt+`"`, input)
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+
+	returnStr := `"` + inputInt + `"`
+	return returnStr, nil
+}
+
+func vsDoSetAudioMute(socketKey, output string, value string) (string, error) {
+	function := "vsDoSetAudioMute"
+	onoff := "not set"
+
+	switch value {
+	case `"true"`:
+		onoff = "ON" // Disable video in Kramer
+	case `"false"`:
+		onoff = "OFF" // Enable video
+	default:
+		errMsg := fmt.Sprintf(function + " - 0j4md4n unrecognized audiomute value: " + value)
+		framework.AddToErrors(socketKey, errMsg)
+		return value, errors.New(errMsg)
+	}
+
+	baseStr := "X-MUTE"
+	portType := "ANALOG_AUDIO"
+
+	// Ex Command: #X-MUTE OUT.ANALOG_AUDIO.1.AUDIO.1,ON
+	commandStr := []byte("#" + baseStr + " OUT." + portType + "." + output + ".AUDIO.1," + onoff)
+	resp, err := sendCommand(socketKey, commandStr, baseStr)
+
+	if err != nil {
+		errMsg := fmt.Sprintf(function+" - 2jdj4j error sending command %v", err.Error())
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	// Parse the value we got back
+	// Ex Response: #X-MUTE OUT.ANALOG_AUDIO.1.AUDIO.1,ON
+	respVals := strings.Split(string(resp), " ") // Kramer delimits responses with spaces
+	respMute := strings.Split(respVals[1], ",")  // Kramer delimits the mute part of the response with commas
+	if len(respMute) != 2 {
+		errMsg := fmt.Sprintf(function+" - k4mdj4 wrong number of tokens in response: %s", string(resp))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	state := respMute[1]
+	switch state {
+	case "OFF":
+		value = "false"
+	case "ON":
+		value = "true"
+	default: // not a legal value
+		errMsg := fmt.Sprintf(function + " -9cj4dk unrecognized response to mute command: " + state)
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+
+	// If we got here, the response was good, so successful return with the state indication
+
+	return value, nil
+}
+
+func vsDoGetAudioRoute(socketKey string, output string) (string, error) {
+	function := "vsDoGetAudioRoute"
+	baseStr := "X-ROUTE"
+
+	portType := "ANALOG_AUDIO"
+
+	// #X-ROUTE? OUT.ANALOG_AUDIO.1.AUDIO.1
+	commandStr := []byte("#" + baseStr + "? OUT." + portType + "." + output + ".AUDIO.1")
+	resp, err := sendCommand(socketKey, commandStr, baseStr)
+	if err != nil {
+		errMsg := fmt.Sprintf(function+" - 4kck4j error sending command %v", err.Error())
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	// Ex Response: ~01@X-ROUTE OUT.ANALOG_AUDIO.1.AUDIO.1,IN.HDMI.1.AUDIO.1
+	respVals := strings.Split(string(resp), " ") // Kramer delimits responses with spaces
+	respRoute := strings.Split(respVals[1], ",") // Kramer delimits the volume part of the response with commas
+	if len(respRoute) != 2 {
+		errMsg := fmt.Sprintf(function+" - 4kdihd wrong number of tokens in response: %s", string(resp))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	// respRoute = [ OUT.ANALOG_AUDIO.1.AUDIO.1 IN.HDMI.1.AUDIO.1 ]
+	outputString := respRoute[0]
+	inputString := respRoute[1]
+
+	outputStringParts := strings.Split(outputString, ".")
+	inputStringParts := strings.Split(inputString, ".")
+
+	_, err = strconv.Atoi(string(outputStringParts[2]))
+	intIn, err2 := strconv.Atoi(string(inputStringParts[2]))
+
+	if err != nil || err2 != nil { // Illegal input or output
+		errMsg := function + " - 4ij4idj Invalid input or output value in device response received: " +
+			string(outputStringParts[2]) + " " + string(inputStringParts[2])
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+
+	returnStr := `"` + strconv.Itoa(intIn) + `"`
+	return returnStr, nil
+}
+
+func vsDoGetAudioMute(socketKey string, output string) (string, error) {
+	function := "vsDoGetAudioMute"
+
+	baseStr := "X-MUTE"
+	portType := "ANALOG_AUDIO"
+
+	// #X-MUTE? OUT.ANALOG_AUDIO.1.AUDIO.1
+	commandStr := []byte("#" + baseStr + "? OUT." + portType + "." + output + ".AUDIO.1")
+	resp, err := sendCommand(socketKey, commandStr, baseStr)
+	framework.Log(fmt.Sprintf(function + " - got resp: " + string(resp) + "\n"))
+	if err != nil {
+		errMsg := fmt.Sprintf(function+" - 2jdj4j error sending command %v", err.Error())
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+	// Parse the value we got back
+	respVals := strings.Split(string(resp), " ") // Kramer delimits responses with spaces
+	respMute := strings.Split(respVals[1], ",")  // Kramer delimits the mute part of the response with commas
+	if len(respMute) != 2 {
+		errMsg := fmt.Sprintf(function+" - 54fsav wrong number of tokens in response: %s", string(resp))
+		framework.AddToErrors(socketKey, errMsg)
+		return string(resp), errors.New(errMsg)
+	}
+
+	value := "unknown"
+	state := respMute[1]
+	switch state {
+	case "OFF":
+		value = "false"
+	case "ON":
+		value = "true"
+	default: // not a legal value
+		errMsg := function + " - get audio mute returned: " + state + " which is not a legal value\n"
+		framework.AddToErrors(socketKey, errMsg)
+		return errMsg, errors.New(errMsg)
+	}
+
+	return `"` + value + `"`, nil
+}

@@ -52,6 +52,8 @@ func doDeviceSpecificSet(socketKey string, setting string, arg1 string, arg2 str
 		return setAudioMute(socketKey, arg1, arg2)
 	case "videomute":
 		return setVideoMute(socketKey, arg1, arg2)
+	case "audioroute":
+		return setAudioRoute(socketKey, arg1, arg2)
 	}
 
 	// If we get here, we didn't recognize the setting.  Send an error back to the config writer who had a bad URL.
@@ -84,6 +86,8 @@ func doDeviceSpecificGet(socketKey string, setting string, arg1 string, arg2 str
 		return getAudioAndVideoRoute(socketKey, arg1)
 	case "audiomute":
 		return getAudioMute(socketKey, arg1) // arg1 is name in this case
+	case "audioroute":
+		return getAudioRoute(socketKey, arg1)
 	case "videomute":
 		return getVideoMute(socketKey, arg1)
 	case "videoinputstatus":
